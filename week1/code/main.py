@@ -1,17 +1,38 @@
-from time import time
+from dbg import DBG
+from utils import read_data
 
-def fib_test():
-    def fib(n):
-        return n if n < 2 else fib(n - 1) + fib(n - 2)
+import sys
+from python import os
 
-    t0 = time()
-    ans = fib(40)
-    t1 = time()
-    print(f'Computed fib(40) = {ans} in {t1 - t0} seconds.')
+
+def get_n50(arr) -> int:
+    mid_pt = sum(arr) / 2
+    loc = 0
+    for ctg in arr:
+        curr = ctg
+        loc += curr
+        if loc >= mid_pt:
+            return curr
+
 
 def main():
-    print("Hello, World!")
-    fib_test()
+    argv = sys.argv
+    short1, short2, long1 = read_data(os.path.join('./', argv[1]))
+
+    k = 25
+    dbg = DBG(k=k, data_list=short1.append(short2).append(long1))
+    ctg_info = []
+    with open(os.path.join('./', argv[1], 'contig.fasta'), 'w') as f:
+        for i in range(20):
+            c = dbg.get_longest_contig()
+            if c is None:
+                break
+            print(i, len(c))
+            f.write('>contig_%d\n' % i)
+            f.write(c + '\n')
+            ctg_info.append(len(c))
+    print(ctg_info)
+    print("n50:", get_n50(ctg_info))
 
 if __name__ == "__main__":
     main()
