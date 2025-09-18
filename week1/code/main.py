@@ -2,6 +2,7 @@ from dbg import DBG
 from utils import read_data
 
 import sys
+import time
 
 
 def get_n50(arr) -> int:
@@ -15,6 +16,8 @@ def get_n50(arr) -> int:
 
 
 def main():
+    start_time = time.time()
+
     argv = sys.argv
     data_list = read_data(argv[1])
 
@@ -27,12 +30,13 @@ def main():
             c = dbg.get_longest_contig()
             if c is None:
                 break
-            print(i, len(c))
+            # print(i, len(c))
             f.write('>contig_'+ str(i) +'\n')
             f.write(c + '\n')
             ctg_info.append(len(c))
-    print(ctg_info)
-    print("n50:", get_n50(ctg_info))
+    # print(ctg_info)
+    total_time = time.time() - start_time
+    print(f"{total_time:.2f}    {get_n50(ctg_info)}")
 
 if __name__ == "__main__":
     main()

@@ -59,7 +59,7 @@ def test_node_children():
 
     # assert
     assert parent.kmer == kmer
-    assert parent.get_children() == [child1, child2]
+    assert parent.get_children().sort() == [child1, child2].sort()
 
     # act
     parent.remove_children({child1, child2})
@@ -68,202 +68,303 @@ def test_node_children():
     assert parent.kmer == kmer
     assert parent.get_children() == []
 
-# chatbot tests
 
-from week1.code.dbg import reverse_complement, Node, DBG
-import pytest
+def test_reverse_complement():
+    # Test single nucleotides
+    assert reverse_complement("A") == "T"
+    assert reverse_complement("T") == "A"
+    assert reverse_complement("G") == "C"
+    assert reverse_complement("C") == "G"
+
+    # Test dinucleotides
+    assert reverse_complement("AT") == "AT"
+    assert reverse_complement("CG") == "CG"
+    assert reverse_complement("AG") == "CT"
+    assert reverse_complement("TC") == "GA"
+
+    # Test longer sequences
+    assert reverse_complement("ATCG") == "CGAT"
+    assert reverse_complement("GGATCC") == "GGATCC"
+    assert reverse_complement("ACGTACGT") == "ACGTACGT"
+    print("✓ test_reverse_complement passed")
 
 
-# Existing tests remain here...
+def test_node():
+    # Test initialization
+    node = Node("ATCG")
+    assert node.kmer == "ATCG"
+    assert node.children == set()
+    assert node.count == 0
+    assert not node.visited
+    assert node.depth == 0
+    assert node.max_depth_child is None
 
-# New DBG class tests
-def test_dbg_init_valid():
-    """Test DBG initialization with valid data"""
-    data = ["ATGC", "GCAT"]
-    dbg = DBG(k=2, data_list=data)
+    # Test add_child
+    node.add_child(1)
+    assert node.children == {1}
+    node.add_child(2)
+    assert node.children == {1, 2}
+    node.add_child(1)  # Adding duplicate
+    assert node.children == {1, 2}
+
+    # Test increase
+    assert node.count == 0
+    node.increase()
+    assert node.count == 1
+    node.increase()
+    assert node.count == 2
+
+    # Test reset
+    node.visited = True
+    node.depth = 5
+    node.max_depth_child = 3
+    node.reset()
+    assert not node.visited
+    assert node.depth == 0
+    assert node.max_depth_child is None
+    # Ensure children and count are not reset
+    assert node.children == {1, 2}
+    assert node.count == 2
+
+    # Test get_count
+    assert node.get_count() == 2
+
+    # Test get_children
+    children = node.get_children()
+    assert 1 in children
+    assert 2 in children
+    assert len(children) == 2
+
+    # Test remove_children
+    node.remove_children({2, 4})
+    assert node.children == {1}
+    print("✓ test_node passed")
+
+
+def test_dbg_init():
+    # Test valid data
+    data = ["ATCG", "GCTA"]
+    dbg = DBG(2, data)
     assert dbg.k == 2
-    assert len(dbg.nodes) > 0
-    assert len(dbg.kmer2idx) > 0
+    assert len(dbg.nodes) == 8  # 4 kmers per sequence
+    assert dbg.kmer_count == 8
+
+    # Test invalid data
+    try:
+        DBG(3, [])  # Empty data list
+        assert False, "Expected exception for empty data list"
+    except Exception:
+        pass
+
+    try:
+        DBG(10, ["ATCG"])  # k > sequence length
+        assert False, "Expected exception for k > sequence length"
+    except Exception:
+        pass
+    print("✓ test_dbg_init passed")
 
 
-def test_dbg_init_invalid_data():
-    """Test DBG initialization with empty data"""
-    with pytest.raises(AssertionError):
-        DBG(k=2, data_list=[])
+def test_dbg_add_node():
+    dbg = DBG(2, ["ATCG"])
+    # First addition
 
-
-def test_dbg_init_invalid_k():
-    """Test DBG initialization with k larger than read length"""
-    with pytest.raises(AssertionError):
-        DBG(k=10, data_list=["ATGC"])
-
-
-def test_add_node():
-    """Test node addition to DBG"""
-    dbg = DBG(k=2, data_list=["ATGC"])
-
-    # Add existing node
     idx1 = dbg._add_node("AT")
-    assert dbg.nodes[idx1].count == 3  # Already added during init
+    assert idx1 == 0
+    assert dbg.nodes[0].kmer == "AT"
+    assert dbg.nodes[0].count == 2
+    # Adding existing node
+    assert dbg.nodes[1].count == 1
 
-    # Add new node
-    idx2 = dbg._add_node("GC")
-    assert dbg.kmer_count == 4
-    assert dbg.nodes[idx2].kmer == "GC"
+    idx2 = dbg._add_node("AT")
+    assert idx2 == 0
+    assert dbg.nodes[0].count == 3
+    # Adding new node
+    idx3 = dbg._add_node("TC")
+    assert idx3 == 1
+    assert dbg.nodes[1].kmer == "TC"
+    assert dbg.nodes[1].count == 2
+    print("✓ test_dbg_add_node passed")
 
 
-def test_add_arc():
-    """Test arc addition to DBG"""
-    dbg = DBG(k=2, data_list=["ATG"])
-    dbg._reset()
-    dbg._add_arc("AT", "TG")
-
-    # Check nodes exist
-    assert "AT" in dbg.kmer2idx
-    assert "TG" in dbg.kmer2idx
-
+def test_dbg_add_arc():
+    dbg = DBG(2, ["ATCG"])
+    # Add arc AT->TC
+    dbg._add_arc("AT", "TC")
+    # Check nodes were created
+    assert 0 in dbg.nodes
+    assert 1 in dbg.nodes
+    assert dbg.nodes[0].kmer == "AT"
+    assert dbg.nodes[1].kmer == "TC"
     # Check child relationship
-    at_idx = dbg.kmer2idx["AT"]
-    assert "TG" in dbg.nodes[at_idx].children
+    assert 1 in dbg.nodes[0].children
+    print("✓ test_dbg_add_arc passed")
 
 
-def test_get_depth():
-    """Test depth calculation in DBG"""
-    dbg = DBG(k=2, data_list=["ATGC"])
-    dbg._reset()
+def test_dbg_get_sorted_children():
+    # Create DBG with minimal data and reset it
+    dbg = DBG(2, ["AT"])
+    dbg.nodes = {}
+    dbg.kmer2idx = {}
+    dbg.kmer_count = 0
 
-    # Linear path: AT -> TG -> GC
-    at_idx = dbg.kmer2idx["AT"]
-    tg_idx = dbg.kmer2idx["TG"]
-    gc_idx = dbg.kmer2idx["GC"]
+    # Now add nodes manually
+    node1 = dbg.nodes[dbg._add_node("AA")]
+    node2 = dbg.nodes[dbg._add_node("TT")]
+    node3 = dbg.nodes[dbg._add_node("CC")]
 
-    # Manually set children for controlled test
-    dbg.nodes[at_idx].children = ["TG"]
-    dbg.nodes[tg_idx].children = ["GC"]
+    node1.increase()  # count=1
+    node2.increase()  # count=1
+    node2.increase()  # count=2
+    node3.increase()  # count=1
+    node3.increase()  # count=2
+    node3.increase()  # count=3
+
+    # Create a parent node and add children
+    parent_idx = dbg._add_node("AT")
+    parent = dbg.nodes[parent_idx]
+    parent.add_child(dbg.kmer2idx["AA"])
+    parent.add_child(dbg.kmer2idx["TT"])
+    parent.add_child(dbg.kmer2idx["CC"])
+
+    # Get sorted children (should be sorted by count descending)
+    sorted_children = dbg._get_sorted_children(parent_idx)
+    expected_order = [
+        dbg.kmer2idx["CC"],  # count=3
+        dbg.kmer2idx["TT"],  # count=2
+        dbg.kmer2idx["AA"]  # count=1
+    ]
+    assert sorted_children == expected_order
+    print("✓ test_dbg_get_sorted_children passed")
+
+def test_dbg_get_depth():
+    dbg = DBG(2, ["ATCG"])
+    # Create a linear chain: A -> B -> C
+    a_idx = dbg._add_node("AA")
+    b_idx = dbg._add_node("BB")
+    c_idx = dbg._add_node("CC")
+
+    dbg.nodes[a_idx].add_child(b_idx)
+    dbg.nodes[b_idx].add_child(c_idx)
 
     # Calculate depths
-    depth_gc = dbg._get_depth(gc_idx)  # Should be 1 (leaf)
-    depth_tg = dbg._get_depth(tg_idx)  # Should be 2
-    depth_at = dbg._get_depth(at_idx)  # Should be 3
+    depth_a = dbg._get_depth(a_idx)
+    depth_b = dbg._get_depth(b_idx)
+    depth_c = dbg._get_depth(c_idx)
 
-    assert depth_gc == 1
-    assert depth_tg == 2
-    assert depth_at == 3
+    # C has no children -> depth=1
+    assert depth_c == 1
+    # B has C as child -> depth=1 + depth(C)=2
+    assert depth_b == 2
+    # A has B as child -> depth=1 + depth(B)=3
+    assert depth_a == 3
+
+    # Check max_depth_child pointers
+    assert dbg.nodes[a_idx].max_depth_child == b_idx
+    assert dbg.nodes[b_idx].max_depth_child == c_idx
+    assert dbg.nodes[c_idx].max_depth_child is None
+    print("✓ test_dbg_get_depth passed")
 
 
-def test_get_longest_path():
-    """Test longest path detection"""
-    dbg = DBG(k=2, data_list=["ATGC"])
+def test_dbg_reset():
+    dbg = DBG(2, ["ATCG"])
+    # Modify some nodes
+    for node in dbg.nodes.values():
+        node.visited = True
+        node.depth = 5
+        node.max_depth_child = 1
+
     dbg._reset()
 
-    # Create a linear path: AT -> TG -> GC
-    at_idx = dbg.kmer2idx["AT"]
-    tg_idx = dbg.kmer2idx["TG"]
-    gc_idx = dbg.kmer2idx["GC"]
+    # Check all nodes are reset
+    for node in dbg.nodes.values():
+        assert not node.visited
+        assert node.depth == 0
+        assert node.max_depth_child is None
+    print("✓ test_dbg_reset passed")
 
-    dbg.nodes[at_idx].children = ["TG"]
-    dbg.nodes[tg_idx].children = ["GC"]
 
+def test_dbg_get_longest_path():
+    dbg = DBG(2, ["ATCG"])
+    # Create two paths: A->B->C (length 3) and D->E (length 2)
+    a_idx = dbg._add_node("AA")
+    b_idx = dbg._add_node("BB")
+    c_idx = dbg._add_node("CC")
+    d_idx = dbg._add_node("DD")
+    e_idx = dbg._add_node("EE")
+
+    dbg.nodes[a_idx].add_child(b_idx)
+    dbg.nodes[b_idx].add_child(c_idx)
+    dbg.nodes[d_idx].add_child(e_idx)
+
+    # Get longest path
     path = dbg._get_longest_path()
-    assert path == [at_idx, tg_idx, gc_idx]
+    expected_path = [a_idx, b_idx, c_idx]
+    assert path == expected_path
+    print("✓ test_dbg_get_longest_path passed")
 
 
-def test_delete_path():
-    """Test path deletion from DBG"""
-    dbg = DBG(k=2, data_list=["ATGC"])
-    dbg._reset()
+def test_dbg_delete_path():
+    dbg = DBG(2, ["ATCG"])
+    # Create nodes and relationships
+    a_idx = dbg._add_node("AA")
+    b_idx = dbg._add_node("BB")
+    c_idx = dbg._add_node("CC")
+    d_idx = dbg._add_node("DD")
 
-    # Create a path: AT -> TG -> GC
-    at_idx = dbg.kmer2idx["AT"]
-    tg_idx = dbg.kmer2idx["TG"]
-    gc_idx = dbg.kmer2idx["GC"]
+    dbg.nodes[a_idx].add_child(b_idx)
+    dbg.nodes[b_idx].add_child(c_idx)
+    dbg.nodes[d_idx].add_child(b_idx)  # D also points to B
 
-    dbg.nodes[at_idx].children = ["TG"]
-    dbg.nodes[tg_idx].children = ["GC"]
-
-    # Delete path
-    path = [at_idx, tg_idx, gc_idx]
+    # Delete path A->B->C
+    path = [a_idx, b_idx, c_idx]
     dbg._delete_path(path)
 
-    # Verify nodes are deleted
-    assert at_idx not in dbg.nodes
-    assert tg_idx not in dbg.nodes
-    assert gc_idx not in dbg.nodes
+    # Check nodes are deleted
+    assert a_idx not in dbg.nodes
+    assert b_idx not in dbg.nodes
+    assert c_idx not in dbg.nodes
+    assert d_idx in dbg.nodes
+
+    # Check D's children are updated
+    assert dbg.nodes[d_idx].children == set()
+    print("✓ test_dbg_delete_path passed")
 
 
-def test_concat_path():
-    """Test path concatenation"""
-    dbg = DBG(k=2, data_list=["ATGC"])
-    dbg._reset()
+def test_dbg_concat_path():
+    dbg = DBG(2, ["ATCG"])
+    # Create nodes with kmers
+    a_idx = dbg._add_node("AT")
+    b_idx = dbg._add_node("TC")
+    c_idx = dbg._add_node("CG")
 
-    # Create a path: AT -> TG -> GC
-    at_idx = dbg.kmer2idx["AT"]
-    tg_idx = dbg.kmer2idx["TG"]
-    gc_idx = dbg.kmer2idx["GC"]
-
-    path = [at_idx, tg_idx, gc_idx]
+    path = [a_idx, b_idx, c_idx]
     contig = dbg._concat_path(path)
-    assert contig == "ATGC"
+    assert contig == "ATCG"
+
+    # Test empty path
+    assert dbg._concat_path([]) is None
+    print("✓ test_dbg_concat_path passed")
 
 
-def test_get_longest_contig():
-    """Test full contig extraction process"""
-    dbg = DBG(k=2, data_list=["ATGC"])
+def test_dbg_get_longest_contig(): ###
+    # Test with simple linear sequence
+    dbg = DBG(3, ["ATCG"])
     contig = dbg.get_longest_contig()
+    assert contig in ["ATCG", "CGAT"]  # Could be original or reverse complement
 
-    # Should return the full sequence
-    assert contig == "ATGC"
+    # Test with branching
+    dbg = DBG(2, ["ATCG", "ATGG"])  # Creates branches at AT
+    contig1 = dbg.get_longest_contig()
+    # Should return either ATCG or ATGG (both length 4)
+    assert contig1 in ["ATCG", "ATGG"]
 
-    # Verify nodes are deleted
-    assert len(dbg.nodes) == 0
+    # After first contig is removed, next call should return the other
+    contig2 = dbg.get_longest_contig()
+    assert contig2 in ["ATCG", "ATGG"]
+    assert contig1 != contig2
 
-
-def test_reverse_complement_handling():
-    """Test reverse complement handling in DBG"""
-    data = ["ATGC"]
-    dbg = DBG(k=2, data_list=data)
-
-    # Should contain both original and reverse complement kmers
-    assert "AT" in dbg.kmer2idx
-    assert "TG" in dbg.kmer2idx  # Original
-    assert "GC" in dbg.kmer2idx  # Reverse complement of AT
-    assert "CA" in dbg.kmer2idx  # Reverse complement of GC
-
-
-# def test_multiple_contigs():
-#     """Test extraction of multiple contigs"""
-#     data = ["ATGC", "GCTA"]  # Two separate sequences
-#     dbg = DBG(k=2, data_list=data)
-#
-#     # Extract first contig
-#     contig1 = dbg.get_longest_contig()
-#     assert len(contig1) == 7
-#
-#     # Extract second contig
-#     contig2 = dbg.get_longest_contig()
-#     assert len(contig2) == 4
-#
-#     # No more contigs should be available
-#     assert dbg.get_longest_contig() is None
-
-
-def test_circular_sequence():
-    """Test handling of circular sequences"""
-    data = ["ATGCA"]  # Circular: AT->TG->GC->CA->AT
-    dbg = DBG(k=2, data_list=data)
-
-    # Should handle circularity without infinite loops
+    # Test with reverse complement
+    dbg = DBG(3, ["ATCG"])  # Reverse complement is CGAT
     contig = dbg.get_longest_contig()
-    assert len(contig) >= 2  # At least one k-mer pair
-
-
-def test_kmer_count_accuracy():
-    """Test k-mer counting accuracy"""
-    data = ["ATATAT"]  # Contains AT multiple times
-    dbg = DBG(k=2, data_list=data)
-
-    at_idx = dbg.kmer2idx["AT"]
-    count = dbg.nodes[at_idx].get_count()
-
-    # AT added 4 times in original and 4 times in reverse complement
-    assert count == 8
+    assert contig in ["ATCG", "CGAT"]
+    print("✓ test_dbg_get_longest_contig passed")

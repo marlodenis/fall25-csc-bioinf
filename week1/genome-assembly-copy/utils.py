@@ -8,7 +8,7 @@ def read_fasta(path, name):
             line = line.strip()
             if line[0] != '>':
                 data.append(line)
-    print(name, len(data), len(data[0]))
+    # print(name, len(data), len(data[0]))
     # print('Sample:', data[0])
     return data
 
