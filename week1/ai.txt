@@ -1,0 +1,28 @@
+AI usage for CSC 427 deliverable 1
+
+A disclaimer: for the sake of readability, a brief description of the changes assisted by LLMs, and a link to the chat will be provided.
+
+main.py:
+- noticed discrepancy in my N50 calculation function, and corrected it.
+
+dbg.py:
+- GLM-4.5: General porting/restructuring help
+
+- GLM-4.5: Wrote (mostly useful) unit tests to validate structures post porting
+
+- Claude Sonnet 4: Rewrote _get_depth method to work iteratively with large input data
+https://claude.ai/share/f503302e-c117-48a9-8cc4-4bd9375d7a4e
+
+utils.py: 
+- GLM-4.5: helped handle general I/O issues
+
+evaluate.sh: 
+- GLM-4.5: wrote helped improve script
+https://chat.z.ai/s/14bac2e2-7e6b-441a-8178-0cc9bac4e803
+
+GLM Chats (they were all over the place):
+https://chat.z.ai/s/14bac2e2-7e6b-441a-8178-0cc9bac4e803
+https://chat.z.ai/s/680e9589-b5e6-4dc7-9047-b6f307d7f0a8
+https://chat.z.ai/s/680e9589-b5e6-4dc7-9047-b6f307d7f0a8
+https://chat.z.ai/s/71950830-9168-4176-85a9-f929111560f8
+https://chat.z.ai/s/bc543efe-7e51-4526-8626-610808b3dedb

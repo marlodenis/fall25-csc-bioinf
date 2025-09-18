@@ -30,11 +30,9 @@ def main():
             c = dbg.get_longest_contig()
             if c is None:
                 break
-            # print(i, len(c))
             f.write('>contig_'+ str(i) +'\n')
             f.write(c + '\n')
             ctg_info.append(len(c))
-    # print(ctg_info)
     total_time = time.time() - start_time
     print(f"{total_time:.2f}    {get_n50(ctg_info)}")
 
